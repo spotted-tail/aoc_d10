@@ -119,10 +119,12 @@ class Map():
         #self.connect_pipes()
 
     def print_map(self):
+        print('Input Map:')
         for row in range(self._rows):
             for column in range(self._rows):
                 print(f'{self._map[row][column].symbol}', end='')
-            print()
+            print('')
+        print('')
 
     def find_start_coord(self):
         for row in range(self._rows):
@@ -139,9 +141,7 @@ class Map():
 
     def find_creature(self):
         start_coord = self.find_start_coord()
-        if start_coord: 
-            print(f'StartCoord = {start_coord.row}, {start_coord.column}')
-        else:
+        if not start_coord: 
             print('ERROR: Could not find start coord. Invalid Map')
             sys.exit(0)
 
@@ -181,10 +181,13 @@ class Map():
         return None
     
     def identify_loop(self, start_point):
+        print("Pathing:")
+        print(f'Starting position = {start_point}')
         direction = self.find_exit(start_point)
         if direction:
             path = self.crawl(direction, start_point)
-        print(len(path))
+        
+        print(f'Animal is {len(path)} positions away from starting position.')
 
     def crawl(self, direction, coord, path = []):
         tile_coord = coord + get_tile_offset(direction)
