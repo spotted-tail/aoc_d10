@@ -2,7 +2,64 @@ import sys
 import argparse
 from collections import namedtuple
 
-PipeExit = namedtuple('PipeExit', 'direction, coord')
+
+def get_tile_offset(direction):
+    keys = ['n', 'e', 's', 'w']
+    values = [Coord(-1, 0), Coord(0, 1), Coord(1, 0), Coord(0, -1)]
+    offsets = dict(zip(keys, values))
+    if direction in offsets:
+        return offsets[direction]
+    else:
+        return None
+
+
+def get_mirror_direction(direction):
+    keys = ['n', 'e', 's', 'w']
+    values = ['s', 'w', 'n', 'e']
+    opp_dir = dict(zip(keys, values))
+    if direction in opp_dir:
+        return opp_dir[direction]
+    else:
+        return None
+    
+def get_other_exit(symbol, direction):
+    keys = ['n', 'e', 's', 'w']
+    values = [['|', 'L', 'J'], ['F','-','L'], ['F', '7', '|'], ['-', '7', 'J']]
+
+    exits = {}
+
+    exits['|'] = {}
+    exits['|']['n'] = 'n'
+    exits['|']['s'] = 's'
+
+    exits['-'] = {}
+    exits['-']['e'] = 'e'
+    exits['-']['w'] = 'w'
+
+    exits['L'] = {}
+    exits['L']['s'] = 'e'
+    exits['L']['w'] = 'n'
+
+    exits['J'] = {}
+    exits['J']['s'] = 'w'
+    exits['J']['e'] = 'n'
+
+    exits['7'] = {}
+    exits['7']['n'] = 'w'
+    exits['7']['e'] = 's'
+
+    exits['F'] = {}
+    exits['F']['n'] = 'e'
+    exits['F']['w'] = 's'
+
+    if symbol in exits:
+        if direction in exits[symbol]:
+            return exits[symbol][direction]
+        else: 
+            return None
+    else:
+        return None
+    
 
 class Coord():
     def __init__(self, row, column):
@@ -25,6 +82,11 @@ class Coord():
     def column(self, column):
         self._column = column
 
+    def __add__(self, coord):
+        return Coord(self.row + coord.row, self.column + coord.column)
+
+    def __str__(self):
+        return f'({self.row}, {self.column})'
 
 class Map():
     def __init__(self):
@@ -39,7 +101,6 @@ class Map():
         try:
             with open(filename, 'r') as fptr:
                 for line in fptr:
-                    print(line, end='')
                     map_row = []
                     column = 0
                     for map_char in list(line.rstrip()):
@@ -55,38 +116,38 @@ class Map():
 
         self._rows = len(self._map[0])
         self._columns = len(self._map)
+        #self.connect_pipes()
 
     def print_map(self):
+        print('Input Map:')
         for row in range(self._rows):
             for column in range(self._rows):
                 print(f'{self._map[row][column].symbol}', end='')
-            print()
+            print('')
+        print('')
 
     def find_start_coord(self):
         for row in range(self._rows):
             for column in range(self._rows):
                 if self._map[row][column].symbol == 'S':
                     return self._map[row][column].coord
-
         return None
 
-    def get_pipe(self, row, column):
-        if (0 <= column <= self._columns) and (0 <= row <= self._rows):
-            return self._map[row][column]
+    def get_pipe(self, coord):
+        if (0 <= coord.column <= self._columns) and (0 <= coord.row <= self._rows):
+            return self._map[coord.row][coord.column]
         else:
             return None
 
     def find_creature(self):
         start_coord = self.find_start_coord()
-        if start_coord: 
-            print(f'{start_coord.row}, {start_coord.column}')
-        else:
+        if not start_coord: 
             print('ERROR: Could not find start coord. Invalid Map')
             sys.exit(0)
 
         exit_count = self.count_neighbor_exits(start_coord)
         if exit_count < 2:
-            print('ERROR: Invalid Map')
+            print(f'ERROR: Invalid Map. Start point has {exit_count} exit(s)')
             sys.exit(0)
         if exit_count > 2:
             print('ERROR: Nominally Invalid Map. Could have dead ends next to start pipe')
@@ -94,62 +155,59 @@ class Map():
 
         self.identify_loop(start_coord)
 
-    def count_neighbor_exits(start_coord):
+    def count_neighbor_exits(self, start_coord):
         count = 0
         directions = ['n','e', 'w', 's']
         for direction in directions:
             if self.check_neighbor_exit(direction, start_coord):
-                count += count
+                count += 1
         return count
     
-    def check_neighbor_exit(self, start_point):
-        offsets = [('n', [-1, 0]),
-                   ('e', [0, 1]),
-                   ('s', [1, 0]),
-                   ('w', [0, -1])]
-
-        opp_dir= [('n', 's'),
-                  ('e', 'w'),
-                  ('s', 'n'),
-                  ('w', 'e')]
-
-        for direction in offsets:
-            offset = offsets[direction]
-            pipe = self.get_pipe(start_point.row + offset[0],
-                                 start_point.column + offset[1])
-            if pipe and pipe.has_exit(opp_dir[direction]):
-                return True
+    def check_neighbor_exit(self, direction, start_point):
+        tile_coord = start_point + get_tile_offset(direction)
+        pipe = self.get_pipe(tile_coord)
+        if pipe and pipe.has_exit(get_mirror_direction(direction)):
+            return True
 
         return False
     
     def find_exit(self, start_point):
-        #check_north
-        pipe = self.get_pipe(start_point[0] - 1, start_point[1])
-        if pipe and pipe.has_south_exit():
-            return PipeExit('n', start_point[0] - 1, start_point[1])
-
-        #check_east
-        pipe = self.get_pipe(start_point[0], start_point[1] + 1)
-        if pipe and pipe.has_west_exit():
-            return PipeExit('e', start_point[0], start_point[1] + 1)
-
-        #check_south
-        pipe = self.get_pipe(start_point[0] + 1, start_point[1])
-        if pipe and pipe.has_north_exit():
-            return PipeExit('s', start_point[0] + 1, start_point[1])
-
-        #check_west
-        pipe = self.get_pipe(start_point[0], start_point[1] - 1)
-        if pipe and pipe.has_east_exit():
-            return PipeExit('w', start_point[0], start_point[1] - 1)
-
+        directions = ['n','e', 's', 'w']
+        for direction in directions:
+            tile_coord = start_point + get_tile_offset(direction)
+            pipe = self.get_pipe(tile_coord)
+            if pipe and pipe.has_exit(get_mirror_direction(direction)):
+                return direction
         return None
     
     def identify_loop(self, start_point):
-        first_exit = self.find_exit(start_point)
-        if first_exit:
-            print(f'{first_exit.direction}', {first_exit.y}, {first_exit.x})
-            
+        print(f'Starting position = {start_point}')
+        direction = self.find_exit(start_point)
+        if direction:
+            path = self.crawl(direction, start_point)
+
+        creature_distance = int(len(path)/2)
+        print(f'Creature is {creature_distance} positions away from starting position.')
+        print(f'Animal can be found at {path[creature_distance].coord}')
+
+        print("Pathing:")
+        count = 1
+        for pipe in path:
+            if count == creature_distance:
+                print("*", end='')
+            print(f'{pipe.symbol} @{pipe.coord}')
+            count += 1
+        
+
+    def crawl(self, direction, coord, path = []):
+        tile_coord = coord + get_tile_offset(direction)
+        pipe = self.get_pipe(tile_coord)
+        #print(f'went {direction} to {tile_coord} and found {pipe.symbol}')
+        if not pipe.symbol == 'S':
+            path = self.crawl(get_other_exit(pipe.symbol, direction), tile_coord, path)
+        path.insert(0, pipe)
+        return path
+        
 
 class Pipe:
     def __init__(self, symbol, coord):
@@ -179,16 +237,18 @@ class Pipe:
     def coord(self, coord):
         self._coord = coord
 
+        
     def has_exit(self, direction):
-        exits = [('n', ['|', 'L', 'J']),
-                 ('e', ['F','-','L']),
-                 ('s', ['F', '7', '|']),
-                 ('w', ['-', '7', 'J'])]
-
+        keys = ['n', 'e', 's', 'w']
+        values = [['|', 'L', 'J'], ['F','-','L'], ['F', '7', '|'], ['-', '7', 'J']]
+        exits = dict(zip(keys, values))
         if self.symbol in exits[direction]:
             return True
         else:
             return False
+        
+    def __str__(self):
+        return f'{self.symbol} @{self.coord}'
 
 
 def parse_commandline():
@@ -201,13 +261,21 @@ def parse_commandline():
 
     return parser.parse_args()
 
+def debug_tile_offsets():
+    coord = Coord(1,3)
+    print(coord)
+    for dir in ['n', 'e', 's', 'w']:
+        offset = get_tile_offset(dir)
 
+        print(f'Tile coord in the {dir} direction is {coord + offset}')
+
+    
 def main():
     args = parse_commandline()
     map = Map()
     map.read_map(args.map)
     map.print_map()
-    #map.find_creature()
+    map.find_creature()
 
 if __name__ == '__main__':
     main()
