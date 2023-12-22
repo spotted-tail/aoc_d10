@@ -21,7 +21,45 @@ def get_mirror_direction(direction):
         return opp_dir[direction]
     else:
         return None
+    
+def get_other_exit(symbol, direction):
+    keys = ['n', 'e', 's', 'w']
+    values = [['|', 'L', 'J'], ['F','-','L'], ['F', '7', '|'], ['-', '7', 'J']]
 
+    exits = {}
+
+    exits['|'] = {}
+    exits['|']['n'] = 'n'
+    exits['|']['s'] = 's'
+
+    exits['-'] = {}
+    exits['-']['e'] = 'e'
+    exits['-']['w'] = 'w'
+
+    exits['L'] = {}
+    exits['L']['s'] = 'e'
+    exits['L']['w'] = 'n'
+
+    exits['J'] = {}
+    exits['J']['s'] = 'w'
+    exits['J']['e'] = 'n'
+
+    exits['7'] = {}
+    exits['7']['n'] = 'w'
+    exits['7']['e'] = 's'
+
+    exits['F'] = {}
+    exits['F']['n'] = 'e'
+    exits['F']['w'] = 's'
+
+    if symbol in exits:
+        if direction in exits[symbol]:
+            return exits[symbol][direction]
+        else: 
+            return None
+    else:
+        return None
+    
 
 class Coord():
     def __init__(self, row, column):
@@ -139,14 +177,26 @@ class Map():
             tile_coord = start_point + get_tile_offset(direction)
             pipe = self.get_pipe(tile_coord)
             if pipe and pipe.has_exit(get_mirror_direction(direction)):
-                return pipe
+                return direction
         return None
     
     def identify_loop(self, start_point):
-        first_exit = self.find_exit(start_point)
-        if first_exit:
-            print (f'{first_exit.coord}')
-            
+        direction = self.find_exit(start_point)
+        if direction:
+            path = self.crawl(direction, start_point)
+        print(len(path))
+
+    def crawl(self, direction, coord, path = []):
+        tile_coord = coord + get_tile_offset(direction)
+        pipe = self.get_pipe(tile_coord)
+        print(f'went {direction} to {tile_coord} and found {pipe.symbol}')
+        if pipe.symbol == 'S':
+            path.append(pipe)
+            return path
+        else:
+            path.append(self.crawl(get_other_exit(pipe.symbol, direction), tile_coord, path))
+            return path
+        
 
 class Pipe:
     def __init__(self, symbol, coord):
@@ -176,6 +226,7 @@ class Pipe:
     def coord(self, coord):
         self._coord = coord
 
+        
     def has_exit(self, direction):
         keys = ['n', 'e', 's', 'w']
         values = [['|', 'L', 'J'], ['F','-','L'], ['F', '7', '|'], ['-', '7', 'J']]
