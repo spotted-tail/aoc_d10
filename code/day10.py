@@ -8,6 +8,9 @@ def get_tile_offset(direction):
                ('e', Coord(0, 1)),
                ('s', Coord(1, 0)),
                ('w', Coord(0, -1))]
+    keys = ['n', 'e', 's', 'w']
+    values = [Coord(-1, 0), Coord(0, 1), Coord(1, 0), Coord(0, -1)]
+    offsets = dict(zip(keys, values))
     if direction in offsets:
         return offsets[direction]
     else:
@@ -49,6 +52,8 @@ class Coord():
     def __add__(self, coord):
         return Coord(self.row + coord.row, self.column + coord.column)
 
+    def __str__(self):
+        return f'({self.row}, {self.column})'
 
 class Map():
     def __init__(self):
@@ -107,13 +112,13 @@ class Map():
             print('ERROR: Could not find start coord. Invalid Map')
             sys.exit(0)
 
-        # exit_count = self.count_neighbor_exits(start_coord)
-        # if exit_count < 2:
-        #     print('ERROR: Invalid Map')
-        #     sys.exit(0)
-        # if exit_count > 2:
-        #     print('ERROR: Nominally Invalid Map. Could have dead ends next to start pipe')
-        #     sys.exit(0)
+        exit_count = self.count_neighbor_exits(start_coord)
+        if exit_count < 2:
+            print('ERROR: Invalid Map')
+            sys.exit(0)
+        if exit_count > 2:
+            print('ERROR: Nominally Invalid Map. Could have dead ends next to start pipe')
+            sys.exit(0)
 
         #self.identify_loop(start_coord)
 
@@ -219,7 +224,15 @@ def main():
     map = Map()
     map.read_map(args.map)
     map.print_map()
-    map.find_creature()
+
+    coord = Coord(1,3)
+    print(coord)
+    for dir in ['n', 'e', 's', 'w']:
+        offset = get_tile_offset(dir)
+
+        print(f'Tile coord in the {dir} direction is {coord + offset}')
+
+    #map.find_creature()
 
 if __name__ == '__main__':
     main()
