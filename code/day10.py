@@ -181,24 +181,32 @@ class Map():
         return None
     
     def identify_loop(self, start_point):
-        print("Pathing:")
         print(f'Starting position = {start_point}')
         direction = self.find_exit(start_point)
         if direction:
             path = self.crawl(direction, start_point)
+
+        creature_distance = int(len(path)/2)
+        print(f'Creature is {creature_distance} positions away from starting position.')
+        print(f'Animal can be found at {path[creature_distance].coord}')
+
+        print("Pathing:")
+        count = 1
+        for pipe in path:
+            if count == creature_distance:
+                print("*", end='')
+            print(f'{pipe.symbol} @{pipe.coord}')
+            count += 1
         
-        print(f'Animal is {len(path)} positions away from starting position.')
 
     def crawl(self, direction, coord, path = []):
         tile_coord = coord + get_tile_offset(direction)
         pipe = self.get_pipe(tile_coord)
-        print(f'went {direction} to {tile_coord} and found {pipe.symbol}')
-        if pipe.symbol == 'S':
-            path.append(pipe)
-            return path
-        else:
-            path.append(self.crawl(get_other_exit(pipe.symbol, direction), tile_coord, path))
-            return path
+        #print(f'went {direction} to {tile_coord} and found {pipe.symbol}')
+        if not pipe.symbol == 'S':
+            path = self.crawl(get_other_exit(pipe.symbol, direction), tile_coord, path)
+        path.insert(0, pipe)
+        return path
         
 
 class Pipe:
@@ -238,6 +246,9 @@ class Pipe:
             return True
         else:
             return False
+        
+    def __str__(self):
+        return f'{self.symbol} @{self.coord}'
 
 
 def parse_commandline():
