@@ -115,7 +115,7 @@ class Map():
             print('ERROR: Nominally Invalid Map. Could have dead ends next to start pipe')
             sys.exit(0)
 
-        #self.identify_loop(start_coord)
+        self.identify_loop(start_coord)
 
     def count_neighbor_exits(self, start_coord):
         count = 0
@@ -134,33 +134,18 @@ class Map():
         return False
     
     def find_exit(self, start_point):
-        pass
-        # #check_north
-        # pipe = self.get_pipe(start_point[0] - 1, start_point[1])
-        # if pipe and pipe.has_south_exit():
-        #     return PipeExit('n', start_point[0] - 1, start_point[1])
-
-        # #check_east
-        # pipe = self.get_pipe(start_point[0], start_point[1] + 1)
-        # if pipe and pipe.has_west_exit():
-        #     return PipeExit('e', start_point[0], start_point[1] + 1)
-
-        # #check_south
-        # pipe = self.get_pipe(start_point[0] + 1, start_point[1])
-        # if pipe and pipe.has_north_exit():
-        #     return PipeExit('s', start_point[0] + 1, start_point[1])
-
-        # #check_west
-        # pipe = self.get_pipe(start_point[0], start_point[1] - 1)
-        # if pipe and pipe.has_east_exit():
-        #     return PipeExit('w', start_point[0], start_point[1] - 1)
-
-        # return None
+        directions = ['n','e', 's', 'w']
+        for direction in directions:
+            tile_coord = start_point + get_tile_offset(direction)
+            pipe = self.get_pipe(tile_coord)
+            if pipe and pipe.has_exit(get_mirror_direction(direction)):
+                return pipe
+        return None
     
-    # def identify_loop(self, start_point):
-    #     first_exit = self.find_exit(start_point)
-    #     if first_exit:
-    #         print(f'{first_exit.direction}', {first_exit.y}, {first_exit.x})
+    def identify_loop(self, start_point):
+        first_exit = self.find_exit(start_point)
+        if first_exit:
+            print (f'{first_exit.coord}')
             
 
 class Pipe:
