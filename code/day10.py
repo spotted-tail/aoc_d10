@@ -271,6 +271,7 @@ def debug_tile_offsets():
 
     
 def main():
+    sys.setrecursionlimit(30000)
     args = parse_commandline()
     map = Map()
     map.read_map(args.map)
