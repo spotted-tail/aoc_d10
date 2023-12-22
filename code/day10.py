@@ -4,10 +4,6 @@ from collections import namedtuple
 
 
 def get_tile_offset(direction):
-    offsets = [('n', Coord(-1, 0)),
-               ('e', Coord(0, 1)),
-               ('s', Coord(1, 0)),
-               ('w', Coord(0, -1))]
     keys = ['n', 'e', 's', 'w']
     values = [Coord(-1, 0), Coord(0, 1), Coord(1, 0), Coord(0, -1)]
     offsets = dict(zip(keys, values))
@@ -18,10 +14,9 @@ def get_tile_offset(direction):
 
 
 def get_mirror_direction(direction):
-    opp_dir= [('n', 's'),
-            ('e', 'w'),
-            ('s', 'n'),
-            ('w', 'e')]
+    keys = ['n', 'e', 's', 'w']
+    values = ['s', 'w', 'n', 'e']
+    opp_dir = dict(zip(keys, values))
     if direction in opp_dir:
         return opp_dir[direction]
     else:
@@ -114,7 +109,7 @@ class Map():
 
         exit_count = self.count_neighbor_exits(start_coord)
         if exit_count < 2:
-            print('ERROR: Invalid Map')
+            print(f'ERROR: Invalid Map. Start point has {exit_count} exit(s)')
             sys.exit(0)
         if exit_count > 2:
             print('ERROR: Nominally Invalid Map. Could have dead ends next to start pipe')
@@ -127,13 +122,13 @@ class Map():
         directions = ['n','e', 'w', 's']
         for direction in directions:
             if self.check_neighbor_exit(direction, start_coord):
-                count += count
+                count += 1
         return count
     
     def check_neighbor_exit(self, direction, start_point):
         tile_coord = start_point + get_tile_offset(direction)
         pipe = self.get_pipe(tile_coord)
-        if pipe and pipe.has_exit(get_mirror_direction[direction]):
+        if pipe and pipe.has_exit(get_mirror_direction(direction)):
             return True
 
         return False
@@ -197,11 +192,9 @@ class Pipe:
         self._coord = coord
 
     def has_exit(self, direction):
-        exits = [('n', ['|', 'L', 'J']),
-                 ('e', ['F','-','L']),
-                 ('s', ['F', '7', '|']),
-                 ('w', ['-', '7', 'J'])]
-
+        keys = ['n', 'e', 's', 'w']
+        values = [['|', 'L', 'J'], ['F','-','L'], ['F', '7', '|'], ['-', '7', 'J']]
+        exits = dict(zip(keys, values))
         if self.symbol in exits[direction]:
             return True
         else:
@@ -218,13 +211,7 @@ def parse_commandline():
 
     return parser.parse_args()
 
-
-def main():
-    args = parse_commandline()
-    map = Map()
-    map.read_map(args.map)
-    map.print_map()
-
+def debug_tile_offsets():
     coord = Coord(1,3)
     print(coord)
     for dir in ['n', 'e', 's', 'w']:
@@ -232,7 +219,13 @@ def main():
 
         print(f'Tile coord in the {dir} direction is {coord + offset}')
 
-    #map.find_creature()
+    
+def main():
+    args = parse_commandline()
+    map = Map()
+    map.read_map(args.map)
+    map.print_map()
+    map.find_creature()
 
 if __name__ == '__main__':
     main()
