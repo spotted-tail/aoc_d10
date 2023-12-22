@@ -2,7 +2,28 @@ import sys
 import argparse
 from collections import namedtuple
 
-PipeExit = namedtuple('PipeExit', 'direction, coord')
+
+def get_tile_offset(direction):
+    offsets = [('n', Coord(-1, 0)),
+               ('e', Coord(0, 1)),
+               ('s', Coord(1, 0)),
+               ('w', Coord(0, -1))]
+    if direction in offsets:
+        return offsets[direction]
+    else:
+        return None
+
+
+def get_mirror_direction(direction):
+    opp_dir= [('n', 's'),
+            ('e', 'w'),
+            ('s', 'n'),
+            ('w', 'e')]
+    if direction in opp_dir:
+        return opp_dir[direction]
+    else:
+        return None
+
 
 class Coord():
     def __init__(self, row, column):
@@ -25,6 +46,9 @@ class Coord():
     def column(self, column):
         self._column = column
 
+    def __add__(self, coord):
+        return Coord(self.row + coord.row, self.column + coord.column)
+
 
 class Map():
     def __init__(self):
@@ -39,7 +63,6 @@ class Map():
         try:
             with open(filename, 'r') as fptr:
                 for line in fptr:
-                    print(line, end='')
                     map_row = []
                     column = 0
                     for map_char in list(line.rstrip()):
@@ -55,6 +78,7 @@ class Map():
 
         self._rows = len(self._map[0])
         self._columns = len(self._map)
+        #self.connect_pipes()
 
     def print_map(self):
         for row in range(self._rows):
@@ -67,34 +91,33 @@ class Map():
             for column in range(self._rows):
                 if self._map[row][column].symbol == 'S':
                     return self._map[row][column].coord
-
         return None
 
-    def get_pipe(self, row, column):
-        if (0 <= column <= self._columns) and (0 <= row <= self._rows):
-            return self._map[row][column]
+    def get_pipe(self, coord):
+        if (0 <= coord.column <= self._columns) and (0 <= coord.row <= self._rows):
+            return self._map[coord.row][coord.column]
         else:
             return None
 
     def find_creature(self):
         start_coord = self.find_start_coord()
         if start_coord: 
-            print(f'{start_coord.row}, {start_coord.column}')
+            print(f'StartCoord = {start_coord.row}, {start_coord.column}')
         else:
             print('ERROR: Could not find start coord. Invalid Map')
             sys.exit(0)
 
-        exit_count = self.count_neighbor_exits(start_coord)
-        if exit_count < 2:
-            print('ERROR: Invalid Map')
-            sys.exit(0)
-        if exit_count > 2:
-            print('ERROR: Nominally Invalid Map. Could have dead ends next to start pipe')
-            sys.exit(0)
+        # exit_count = self.count_neighbor_exits(start_coord)
+        # if exit_count < 2:
+        #     print('ERROR: Invalid Map')
+        #     sys.exit(0)
+        # if exit_count > 2:
+        #     print('ERROR: Nominally Invalid Map. Could have dead ends next to start pipe')
+        #     sys.exit(0)
 
-        self.identify_loop(start_coord)
+        #self.identify_loop(start_coord)
 
-    def count_neighbor_exits(start_coord):
+    def count_neighbor_exits(self, start_coord):
         count = 0
         directions = ['n','e', 'w', 's']
         for direction in directions:
@@ -102,53 +125,42 @@ class Map():
                 count += count
         return count
     
-    def check_neighbor_exit(self, start_point):
-        offsets = [('n', [-1, 0]),
-                   ('e', [0, 1]),
-                   ('s', [1, 0]),
-                   ('w', [0, -1])]
-
-        opp_dir= [('n', 's'),
-                  ('e', 'w'),
-                  ('s', 'n'),
-                  ('w', 'e')]
-
-        for direction in offsets:
-            offset = offsets[direction]
-            pipe = self.get_pipe(start_point.row + offset[0],
-                                 start_point.column + offset[1])
-            if pipe and pipe.has_exit(opp_dir[direction]):
-                return True
+    def check_neighbor_exit(self, direction, start_point):
+        tile_coord = start_point + get_tile_offset(direction)
+        pipe = self.get_pipe(tile_coord)
+        if pipe and pipe.has_exit(get_mirror_direction[direction]):
+            return True
 
         return False
     
     def find_exit(self, start_point):
-        #check_north
-        pipe = self.get_pipe(start_point[0] - 1, start_point[1])
-        if pipe and pipe.has_south_exit():
-            return PipeExit('n', start_point[0] - 1, start_point[1])
+        pass
+        # #check_north
+        # pipe = self.get_pipe(start_point[0] - 1, start_point[1])
+        # if pipe and pipe.has_south_exit():
+        #     return PipeExit('n', start_point[0] - 1, start_point[1])
 
-        #check_east
-        pipe = self.get_pipe(start_point[0], start_point[1] + 1)
-        if pipe and pipe.has_west_exit():
-            return PipeExit('e', start_point[0], start_point[1] + 1)
+        # #check_east
+        # pipe = self.get_pipe(start_point[0], start_point[1] + 1)
+        # if pipe and pipe.has_west_exit():
+        #     return PipeExit('e', start_point[0], start_point[1] + 1)
 
-        #check_south
-        pipe = self.get_pipe(start_point[0] + 1, start_point[1])
-        if pipe and pipe.has_north_exit():
-            return PipeExit('s', start_point[0] + 1, start_point[1])
+        # #check_south
+        # pipe = self.get_pipe(start_point[0] + 1, start_point[1])
+        # if pipe and pipe.has_north_exit():
+        #     return PipeExit('s', start_point[0] + 1, start_point[1])
 
-        #check_west
-        pipe = self.get_pipe(start_point[0], start_point[1] - 1)
-        if pipe and pipe.has_east_exit():
-            return PipeExit('w', start_point[0], start_point[1] - 1)
+        # #check_west
+        # pipe = self.get_pipe(start_point[0], start_point[1] - 1)
+        # if pipe and pipe.has_east_exit():
+        #     return PipeExit('w', start_point[0], start_point[1] - 1)
 
-        return None
+        # return None
     
-    def identify_loop(self, start_point):
-        first_exit = self.find_exit(start_point)
-        if first_exit:
-            print(f'{first_exit.direction}', {first_exit.y}, {first_exit.x})
+    # def identify_loop(self, start_point):
+    #     first_exit = self.find_exit(start_point)
+    #     if first_exit:
+    #         print(f'{first_exit.direction}', {first_exit.y}, {first_exit.x})
             
 
 class Pipe:
@@ -207,7 +219,7 @@ def main():
     map = Map()
     map.read_map(args.map)
     map.print_map()
-    #map.find_creature()
+    map.find_creature()
 
 if __name__ == '__main__':
     main()
