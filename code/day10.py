@@ -1,6 +1,5 @@
 import sys
 import argparse
-from collections import namedtuple
 
 
 def get_tile_offset(direction):
@@ -139,7 +138,7 @@ class Map():
         else:
             return None
 
-    def find_creature(self):
+    def find_creature(self, debug):
         start_coord = self.find_start_coord()
         if not start_coord: 
             print('ERROR: Could not find start coord. Invalid Map')
@@ -153,7 +152,7 @@ class Map():
             print('ERROR: Nominally Invalid Map. Could have dead ends next to start pipe')
             sys.exit(0)
 
-        self.identify_loop(start_coord)
+        self.identify_loop(start_coord, debug)
 
     def count_neighbor_exits(self, start_coord):
         count = 0
@@ -180,7 +179,7 @@ class Map():
                 return direction
         return None
     
-    def identify_loop(self, start_point):
+    def identify_loop(self, start_point, debug=0):
         print(f'Starting position = {start_point}')
         direction = self.find_exit(start_point)
         if direction:
@@ -188,26 +187,33 @@ class Map():
 
         creature_distance = int(len(path)/2)
         print(f'Creature is {creature_distance} positions away from starting position.')
-        print(f'Animal can be found at {path[creature_distance].coord}')
+        print(f'Creature can be found at {path[creature_distance].coord}')
 
-        print("Pathing:")
-        count = 1
-        for pipe in path:
-            if count == creature_distance:
-                print("*", end='')
-            print(f'{pipe.symbol} @{pipe.coord}')
-            count += 1
+        if debug:
+            print("Pathing:")
+            count = 1
+            for pipe in path:
+                if count == creature_distance:
+                    print("*", end='')
+                print(f'{pipe.symbol} @{pipe.coord}')
+                count += 1
         
 
-    def crawl(self, direction, coord, path = []):
-        tile_coord = coord + get_tile_offset(direction)
-        pipe = self.get_pipe(tile_coord)
-        #print(f'went {direction} to {tile_coord} and found {pipe.symbol}')
-        if not pipe.symbol == 'S':
-            path = self.crawl(get_other_exit(pipe.symbol, direction), tile_coord, path)
-        path.insert(0, pipe)
+    def crawl(self, starting_direction, coord):
+        done = False
+        path = []
+        pipe = self.get_pipe(coord)
+        direction = starting_direction
+        while not done: 
+            new_coord = pipe.coord + get_tile_offset(direction)
+            pipe = self.get_pipe(new_coord)
+            #print(f'went {direction} to {new_coord} and found {pipe.symbol}')
+            direction = get_other_exit(pipe.symbol, direction)
+            path.append(pipe)
+            if pipe.symbol == 'S':
+                done = True
         return path
-        
+
 
 class Pipe:
     def __init__(self, symbol, coord):
@@ -255,10 +261,13 @@ def parse_commandline():
     # Instantiate the parser
     parser = argparse.ArgumentParser(description='Optional app description')
 
-    # Required positional argument
     parser.add_argument('-m', '--map', type=str,
                         help='Filename for a pipe map')
 
+    parser.add_argument('-d', '--debug', 
+                        action="store_true",
+                        help='Filename for a pipe map')
+    
     return parser.parse_args()
 
 def debug_tile_offsets():
@@ -271,12 +280,11 @@ def debug_tile_offsets():
 
     
 def main():
-    sys.setrecursionlimit(30000)
-    args = parse_commandline()
     map = Map()
+    args = parse_commandline()
     map.read_map(args.map)
     map.print_map()
-    map.find_creature()
+    map.find_creature(args.debug)
 
 if __name__ == '__main__':
     main()
