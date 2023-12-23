@@ -236,23 +236,9 @@ class Map():
     def find_highest_corner(self):
         for row in range(self._rows):
             for column in range(self._columns):
-                if self._map[row][column].alias == 'F':
-                    return self._map[row][column]
-
-    def classify_tiles(self):
-        highest_corner = self.find_highest_corner()
-        pipe = highest_corner
-        done = False
-        direction = 'e'
-        print(f'Higest Corner: {pipe}')
-        while not done: 
-            new_coord = pipe.coord + get_tile_offset(direction)
-            pipe = self.get_pipe(new_coord)
-            if pipe.symbol in ['|', '-']:
-                self.tag_tiles_on_rhs(pipe, direction)
-            direction = get_other_exit(pipe.alias, direction)
-            if pipe.coord == highest_corner.coord:
-                done = True
+                tile = self._map[row][column]
+                if tile.alias == 'F' and tile.is_loop:
+                    return tile
 
     def tag_tiles_on_rhs(self, pipe, direction):
         rhs = get_direction(direction, 90)
@@ -264,11 +250,65 @@ class Map():
             if tile:
                 if tile.is_loop:
                     done = True
-                elif tile.symbol == '.':
+                else:
                     tile.is_inside = True
                 coord = tile.coord + offset
             else: 
                 done = True
+
+    def classify_tiles(self):
+        highest_corner = self.find_highest_corner()
+        pipe = highest_corner
+        done = False
+        direction = 'e'
+        print(f'Higest Corner: {pipe}')
+        while not done: 
+            new_coord = pipe.coord + get_tile_offset(direction)
+            pipe = self.get_pipe(new_coord)
+            self.tag_tiles_on_rhs(pipe, direction)
+            direction = get_other_exit(pipe.alias, direction)
+            if pipe.is_corner:
+                self.tag_tiles_on_rhs(pipe, direction)
+              
+            if pipe.coord == highest_corner.coord:
+                done = True
+
+    def print_tile_count_summary(self):
+        tile_counts = {}
+        location_counts = {}
+        loop_tile_count = 0
+        symbols = ['.', 'F', '-', '7', '|', 'L', 'J', 'S']
+        for symbol in symbols:
+            tile_counts[symbol] = 0
+        
+        locations = ['O', 'I']
+        for location in locations:
+            location_counts[location] = 0
+
+        for row in range(self._rows):
+            for column in range(self._columns):
+                tile = self._map[row][column]
+                if tile.is_loop:
+                    loop_tile_count += 1
+                if tile.is_ground:
+                    if tile.is_inside:
+                        location_counts['I'] += 1
+                    else:
+                        location_counts['O'] += 1
+                tile_counts[tile.symbol] += 1
+
+        print (f'Map is {self._rows}x{self._columns}. There are {self._rows * self._columns} total tiles.')
+        print('Tile Counts:')
+        count = 0
+        for symbol in tile_counts:
+            print(f'{symbol}:{tile_counts[symbol]}')
+            count += tile_counts[symbol]
+        print (f'Total Tile Count: {count}')
+        print (f'Total Loop Tiles: {loop_tile_count}')
+
+        print('Location Counts:')
+        for location in location_counts:
+            print(f'{location}:{location_counts[location]}')
 
 class Pipe:
     def __init__(self, symbol, coord):
@@ -284,6 +324,18 @@ class Pipe:
         self.coord = coord
         self.is_loop = False
         self.is_inside = False
+
+    @property
+    def is_corner(self):
+        if self.alias in ['F', '7', 'L', 'J']:
+            return True
+        return False
+
+    @property
+    def is_ground(self):
+        if self.alias in ['.']:
+            return True
+        return False
 
     @property
     def is_inside(self):
@@ -365,6 +417,7 @@ def main():
     map.extract_loop(args.debug)
     map.classify_tiles()
     map.print_cavity_map()
+    map.print_tile_count_summary()
 
 if __name__ == '__main__':
     main()
