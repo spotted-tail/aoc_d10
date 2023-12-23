@@ -116,10 +116,8 @@ class Map():
                         point = Coord(row, column)
                         map_row.append(Pipe(map_char, point))
                         column += 1
-                    print(f'{column} {line}')
                     self._map.append(map_row)
                     row += 1
-            print(f'rows {row}')
         except IOError:
             print(f"Error: Could not open \'{filename}\'")
             sys.exit(0)
@@ -157,7 +155,7 @@ class Map():
 
     def find_start_coord(self):
         for row in range(self._rows):
-            for column in range(self._rows):
+            for column in range(self._columns):
                 if self._map[row][column].symbol == 'S':
                     return self._map[row][column].coord
         return None
@@ -237,15 +235,14 @@ class Map():
 
     def find_highest_corner(self):
         for row in range(self._rows):
-            for column in range(self._rows):
-                if self._map[row][column].symbol in ['F', 'S']:
+            for column in range(self._columns):
+                if self._map[row][column].alias == 'F':
                     return self._map[row][column]
 
     def classify_tiles(self):
         highest_corner = self.find_highest_corner()
         pipe = highest_corner
         done = False
-        path = []
         direction = 'e'
         print(f'Higest Corner: {pipe}')
         while not done: 
